@@ -4,6 +4,33 @@
   
     
     <entry>
+      <title>Virtual Dom</title>
+      <link href="/2020/04/16/virtualDom/"/>
+      <url>/2020/04/16/virtualDom/</url>
+      
+        <content type="html"><![CDATA[<h2 id="什么是虚拟DOM"><a href="#什么是虚拟DOM" class="headerlink" title="什么是虚拟DOM"></a>什么是虚拟DOM</h2><p>Virtual Dom本质上就是js 对象，这个对象是对real Dom的描述。</p><p>优缺点：</p><ul><li><p>局部更新，批处理可以保证比较高效的渲染和比较少的性能损耗</p></li><li><p>跨平台，由于是js对象，既可以用于浏览器，也可以用于SSR</p></li><li><p>首次渲染大量DOM时，由于多了一层虚拟DOM计算，会比真实DOM渲染慢</p></li></ul><p>综上，对于dom操作比较少，仅仅是展示类的页面使用真实DOM更高效，如果有大量的DOM操作使用虚拟DOM更能提高性能。</p><h2 id="简单实现"><a href="#简单实现" class="headerlink" title="简单实现"></a>简单实现</h2><ol><li>js对象描述dom</li></ol><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">function Element(tagName, props, children) &#123;</span><br><span class="line">    this.tagName = tagName</span><br><span class="line">    this.props = props</span><br><span class="line">    this.children = children</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Element.prototype.render = function () &#123;</span><br><span class="line">  var el = document.createElement(this.tagName) // 根据tagName构建</span><br><span class="line">  var props = this.props</span><br><span class="line"></span><br><span class="line">  for (var propName in props) &#123; // 设置节点的DOM属性</span><br><span class="line">    var propValue = props[propName]</span><br><span class="line">    el.setAttribute(propName, propValue)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  var children = this.children || []</span><br><span class="line"></span><br><span class="line">  children.forEach(function (child) &#123;</span><br><span class="line">    var childEl = (child instanceof Element)</span><br><span class="line">      ? child.render() // 如果子节点也是虚拟DOM，递归构建DOM节点</span><br><span class="line">      : document.createTextNode(child) // 如果字符串，只构建文本节点</span><br><span class="line">    el.appendChild(childEl)</span><br><span class="line">  &#125;)</span><br><span class="line"></span><br><span class="line">  return el</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">let el =function (tagName, props, children) &#123;</span><br><span class="line">    return new Element(tagName, props, children)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">let ul = el(&apos;ul&apos;, &#123;</span><br><span class="line">    id: &apos;list&apos;</span><br><span class="line">&#125;, [</span><br><span class="line">    el(&apos;li&apos;, &#123;</span><br><span class="line">        class: &apos;item&apos;</span><br><span class="line">    &#125;, [&apos;Item 1&apos;]),</span><br><span class="line">    el(&apos;li&apos;, &#123;</span><br><span class="line">        class: &apos;item&apos;</span><br><span class="line">    &#125;, [&apos;Item 2&apos;]),</span><br><span class="line">    el(&apos;li&apos;, &#123;</span><br><span class="line">        class: &apos;item&apos;</span><br><span class="line">    &#125;, [&apos;Item 3&apos;])</span><br><span class="line">])</span><br><span class="line"></span><br><span class="line">let ulRoot = ul.render()</span><br><span class="line">document.body.appendChild(ulRoot)</span><br></pre></td></tr></table></figure><blockquote><p><a href="https://jsbin.com/mijejexuro/edit?html,css,js,output" target="_blank" rel="noopener">查看效果</a></p></blockquote><ol start="2"><li>Virtual Dom 算法</li></ol><p>Virtual Dom的优点之一是局部更新，就是因为diff算法。两颗树的完全的 diff 算法时间复杂度为 O(n^3) 。但是在前端当中，你很少会跨越层级的移动DOM元素。所以 Virtual DOM 只会对同一个层级的元素进行对比算法复杂度是O(n)。</p><ul><li>深度优先遍历，记录差异<br>在对比的过程中，会对两颗树进行深度优先的遍历，这样每个节点都有一个唯一的标识，在深度遍历的过程中，每遍历到一个节点就对比该节点是否有变化，如果有变化就记录到一个对象中。</li></ul>]]></content>
+      
+      
+      <categories>
+          
+          <category> JS </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> VUE </tag>
+            
+            <tag> JS </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>数据双向绑定简单实现</title>
       <link href="/2020/04/14/bind/"/>
       <url>/2020/04/14/bind/</url>
